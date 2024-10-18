@@ -39,7 +39,7 @@ FROM movies
 LIMIT 10
 ```
 
-## Skip Records (OFFSET)
+## Skip records (OFFSET)
 
 ```sql
 SELECT *
@@ -52,4 +52,34 @@ LIMIT 3 OFFSET 2
 ```sql
 SELECT movie_title AS title
 FROM movies
+```
+
+## Join strings (CONCAT)
+
+```sql
+SELECT CONCAT(first_name, last_name) AS full_name
+FROM employees
+```
+
+## Filter (WHERE)
+
+```sql
+SELECT *
+FROM studio
+WHERE name = 'Walt Disney'
+```
+
+## Unique (DISTINCT)
+
+```sql
+SELECT DISTINCT department
+FROM employees
+```
+
+## String length (CHAR_LENGTH())
+
+```sql
+SELECT tweet_id
+FROM Tweets
+WHERE char_length(content) > 15;
 ```
