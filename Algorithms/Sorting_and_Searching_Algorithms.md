@@ -2,6 +2,9 @@
 
 ## Binary Search
 
+Time complexity: O(log n)\
+Space complexity: O(1)
+
 ```java
     public int search(int[] nums, int target) {
         int left = 0;
@@ -24,7 +27,9 @@
 
 ## Breadth-First Search (BFS)
 
-Normal
+Normal\
+Time complexity: O(V + E)\
+Space complexity: O(n)
 
 ```java
     public void bfs(TreeNode node) {
@@ -44,7 +49,9 @@ Normal
     }
 ```
 
-Print each level
+Print each level\
+Time complexity: O(V + E)\
+Space complexity: O(n)
 
 ```java
     public void bfs(TreeNode node) {
@@ -71,7 +78,9 @@ Print each level
 
 ## Depth-First Search (DFS)
 
-Normal
+Normal\
+Time complexity: O(V + E)\
+Space complexity: O(n)
 
 ```java
     public void dfs(TreeNode node) {
@@ -82,7 +91,9 @@ Normal
     }
 ```
 
-Count depth
+Count depth\
+Time complexity: O(V + E)\
+Space complexity: O(n)
 
 ```java
     public int dfs(TreeNode node) {
