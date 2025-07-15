@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified">
+
+    <!-- ATTRIBUTES -->
+
+    <!-- Key and value -->
+    <xs:attributeGroup name="KeyAttribute">
+        <xs:attribute name="key" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <xs:attributeGroup name="KeyValueAttributes">
+        <xs:attributeGroup ref="KeyAttribute"/>
+        <xs:attribute name="value" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <!-- Shared calcParam + defaultValue -->
+    <xs:attributeGroup name="CalcParamAttributes">
+        <xs:attribute name="calcParam" type="xs:string" use="required"/>
+        <xs:attribute name="defaultValue" type="xs:string" use="optional"/>
+    </xs:attributeGroup>
+
+    <!-- ENTRY TYPES -->
+
+    <!-- constantEntry -->
+    <xs:complexType name="constantEntryType">
+        <xs:attributeGroup ref="KeyValueAttributes"/>
+    </xs:complexType>
+
+    <!-- calcParamEntry -->
+    <xs:complexType name="calcParamEntryType">
+        <xs:attributeGroup ref="KeyAttribute"/>
+        <xs:attributeGroup ref="CalcParamAttributes"/>
+    </xs:complexType>
+
+    <!-- groovyEntry -->
+    <xs:complexType name="groovyEntryType">
+        <xs:sequence>
+            <!-- Dynamically included calcParams -->
+            <xs:element name="calcParam" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="KeyValueAttributes"/>
+    </xs:complexType>
+
+    <!-- mapEntry -->
+    <xs:complexType name="mapEntryType">
+        <xs:sequence>
+            <xs:group ref="entryGroup" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="KeyAttribute"/>
+    </xs:complexType>
+
+    <!-- GROUPS -->
+
+    <!-- Entry Group -->
+    <xs:group name="entryGroup">
+        <xs:choice>
+            <xs:element name="constantEntry" type="constantEntryType"/>
+            <xs:element name="calcParamEntry" type="calcParamEntryType"/>
+            <xs:element name="mapEntry" type="mapEntryType"/>
+            <xs:element name="groovyEntry" type="groovyEntryType"/>
+            <xs:element name="ifCalcParam" type="ifCalcParamType"/>
+            <xs:element name="ifGroovyPredicate" type="ifGroovyPredicateType"/>
+        </xs:choice>
+    </xs:group>
+
+    <!-- CONDITIONAL BLOCKS -->
+
+    <!-- ifCalcParam with elseIf and else -->
+    <xs:complexType name="ifCalcParamType">
+        <xs:sequence>
+            <!-- then content -->
+            <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+
+            <!-- zero or more elseIf blocks -->
+            <xs:element name="elseIf" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                    <xs:attributeGroup ref="CalcParamAttributes"/>
+                </xs:complexType>
+            </xs:element>
+
+            <!-- optional else block -->
+            <xs:element name="else" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attributeGroup ref="CalcParamAttributes"/>
+    </xs:complexType>
+
+    <!-- ifGroovyPredicate -->
+    <xs:complexType name="ifGroovyPredicateType">
+        <xs:sequence>
+            <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="groovyPredicate" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <!-- ROOT -->
+
+    <xs:element name="usiConfiguration">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
