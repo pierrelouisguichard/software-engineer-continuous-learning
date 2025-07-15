@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<usiConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="config.xsd">
+
+<!--    UsiConfiguration-->
+    <constantEntry key="Class" value="Configuration"/>
+    <calcParamEntry key="QALibrary" calcParam="Aleph"/>
+    <calcParamEntry key="UseFlatResultHandler" calcParam="true"/>
+    <calcParamEntry key="LegacyQAGridVolBump" calcParam="true"/>
+
+<!--    AlephBottomUpRisk-->
+    <calcParamEntry key="CalculateBottomUpRisk" calcParam="ALEPH_BOTTOM_UP_RISK_ENABLED"/>
+    <calcParamEntry key="BottomUpRiskSeparateForwardSettlementRequest" calcParam="ENABLE_FORWARD_SETTLEMENT"/>
+    <calcParamEntry key="PriceFixedCashIndexComponentWithoutSettlement" calcParam="ENABLE_CASH_COMPONENT"/>
+    <calcParamEntry key="BuildUsiBatchForIndexComponents" calcParam="ENABLE_BATCHING"/>
+    <calcParamEntry key="BatchSizeForIndexComponents" calcParam="BATCH_SIZE_FOR_INDEX_COMPONENTS"/>
+    <calcParamEntry key="DisableGenericScenariosForBURisk" calcParam="DISABLE_GENERIC_SCENARIOS_FOR_BURISK"/>
+
+<!--    AlephBottomUpFlags-->
+    <ifCalcParam calcParam="ALEPH_BUP_ENABLED">
+        <mapEntry key="CalculateBottomUpSpotDecompositionConfig">
+            <groovyEntry key="DecompositionFilter" value="getOfficialNameForDecompositionFilter"/>
+        </mapEntry>
+    </ifCalcParam>
+    <calcParamEntry key="PriceFixedCashIndexComponentWithoutSettlement" calcParam="ENABLE_CASH_COMPONENT"/>
+    <calcParamEntry key="UseSettleSpotInAlephBUP" calcParam="USE_SETTLED_SPOT_IN_ALEPH_BUP"/>
+    <ifCalcParam calcParam="ALEPH_BOTTOM_UP_RETURN_ENABLED">
+        <mapEntry key="CalculateBottomUpReturnsDecompositionConfig">
+            <groovyEntry key="DecompositionFilter" value="getConfigNameForDecompositionFilter"/>
+        </mapEntry>
+    </ifCalcParam>
+    <calcParamEntry key="DisabledBUPOptimisation" calcParam="ALEPH_BUP_DISABLE_OPTIMISATION"/>
+
+<!--    BottomUpRiskDecomposition-->
+    <ifCalcParam calcParam="ALEPH_BOTTOM_UP_RISK_ENABLED">
+        <groovyEntry key="CalculateBottomUpRiskDecompositionConfigs" value="getDecompositionConfigs"/>
+    </ifCalcParam>
+
+<!--    AlephCookie-->
+    <groovyEntry key="Cookie" value="getAlephCookie"/>
+
+<!--    SingleAPI-->
+    <ifCalcParam calcParam="USE_PRODUCT_GENERIC_FPF">
+        <mapEntry key="SingleAPIFlags">
+            <groovyEntry key="SingleAPIFlags" value="getSingleAPIFlags"/>
+        </mapEntry>
+    </ifCalcParam>
+
+<!--    ReportingCurrency-->
+    <calcParamEntry key="ReportingCurrency" calcParam="REPORTING_CURRENCY"/>
+
+<!--    ValuationStatesInformation-->
+    <groovyEntry key="ValuationStateId" value="getValuationStatesInformation"/>
+
+<!--    RegulatoryModel-->
+    <calcParamEntry key="ReturnRegulatoryModelType" calcParam="RETURN_REGULATORY_MODEL"/>
+
+<!--    LiborTransition-->
+    <ifCalcParam calcParam="NEW_CURVES_ENABLED">
+        <else>
+            <calcParamEntry key="UseLiborTransitionDetails" calcParam="LIBOR_TRANSITION_ENABLE_IN_CONFIGURATION" defaultValue="true"/>
+        </else>
+    </ifCalcParam>
+
+<!--    GlobalRiskDefaults-->
+    <mapEntry key="GlobalRiskDefaults">
+        <calcParamEntry key="RescaleDivs" calcParam="RESCALE_DIVS_DEFAULT"/>
+    </mapEntry>
+
+<!--    IntradaySettings-->
+    <ifCalcParam calcParam="VALUATION_TIME_AWARE">
+        <calcParamEntry key="IntradaySettings" calcParam="ENABLE_RISK_FRACTIONAL_DATES"/>
+    </ifCalcParam>
+
+<!--    DistributionParameters-->
+    <calcParamEntry key="DistributeMCByBatch" calcParam="DISTRIBUTE_MC_BY_BATCH"/>
+
+<!--    TODO: diagnostics parameter - GPUIndex-->
+    <ifGroovyPredicate groovyPredicate="isGPUIndexPresent">
+        <constantEntry key="UseGPUAcceleration" value="true"/>
+        <groovyEntry key="HostEngineIndex" value="getGPUIndex"/>
+    </ifGroovyPredicate>
+    <ifGroovyPredicate groovyPredicate="isGPUEnabledInstrument">
+        <constantEntry key="UseGPUAcceleration" value="true"/>
+    </ifGroovyPredicate>
+
+<!--    FlattenPivotForward-->
+    <calcParamEntry key="FlattenPivotForward" calcParam="FORCE_FLATTEN_PIVOT_FORWARD"/>
+
+<!--    AdjustVanillaPayoffOnExpiry-->
+    <calcParamEntry key="AdjustVanillaPayoffOnExpiry" calcParam="ADJUST_VANILLA_PAYOFF_ON_EXPIRY"/>
+
+<!--    SettleExpiredTrades-->
+    <calcParamEntry key="SettlesExpiredTrades" calcParam="SETTLE_EXPIRED_TRADES"/>
+
+<!--    TODO: Revise - CustomMutatorScript-->
+    <ifCalcParam calcParam="WITH_CUSTOM_MUTATOR">
+        <groovyEntry key="Script" value="getScript"/>
+<!--        mutatorDefinitionMap-->
+    </ifCalcParam>
+
+<!--    TODO: Revise - FillFixingsPolicy-->
+    <groovyEntry key="FixingsFillingPolicy" value="getFixingsFillingPolicy">
+        <calcParam>FIX_PRESENT</calcParam>
+        <calcParam>FIX_PAST</calcParam>
+        <calcParam>REMOVE_FIXINGS_FROM_TODAY</calcParam>
+    </groovyEntry>
+
+<!--    FPFMultipleOutputs-->
+    <calcParamEntry key="FPFMultipleOutputs" calcParam="ENABLE_FPF_MULTIPLE_OUTPUTS"/>
+
+<!--    NewCurves-->
+    <ifCalcParam calcParam="NEW_CURVES_ENABLED">
+        <groovyEntry key="NewCurvesSettings" value="getNewCurvesSettings"/>
+        <elseIf calcParam="USE_BOX_MARKET_DATA_FOR_BOX_CURRENCIES">
+            <groovyEntry key="NewCurvesSettings" value="getOldCurvesSettings"/>
+        </elseIf>
+    </ifCalcParam>
+
+<!--    ImmediateSettlement-->
+    <calcParamEntry key="DeltaWithImmediateSettlement" calcParam="ENABLE_IMMEDIATE_SETTLEMENT"/>
+    <calcParamEntry key="BottomUpPricingWithImmediateSettlement" calcParam="ALEPH_BUP_WITH_IMMEDIATE_SETTLEMENT"/>
+
+<!--    ForceFPX-->
+    <ifCalcParam calcParam="USE_PRODUCT_GENERIC_FPF">
+        <ifCalcParam calcParam="CONVERT_FPF_TO_LUCID">
+            <constantEntry key="ForceFPX" value="Lucid"/>
+            <else>
+                <constantEntry key="ForceFPX" value="FPF"/>
+            </else>
+        </ifCalcParam>
+    </ifCalcParam>
+
+<!--    ForceLeafUsiExecutionCap-->
+    <calcParamEntry key="ForceLeafUsiExecutionCap" calcParam="FORCE_LEAF_USI_EXECUTION_CAP"/>
+
+<!--    DeltaWithImmediateSettlement-->
+    <calcParamEntry key="DeltaWithImmediateSettlement" calcParam="DELTA_WITH_IMMEDIATE_SETTLEMENT"/>
+
+<!--    DiscoverEquityFutureFixings-->
+    <calcParamEntry key="DiscoverFutureFixings" calcParam="ENABLE_EQUITY_FUTURE_FIXINGS_MARKET_DATA"/>
+
+</usiConfiguration>
