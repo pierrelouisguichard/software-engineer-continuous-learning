@@ -36,7 +36,6 @@
     <!-- groovyEntry -->
     <xs:complexType name="groovyEntryType">
         <xs:sequence>
-            <!-- Dynamically included calcParams -->
             <xs:element name="calcParam" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attributeGroup ref="KeyValueAttributes"/>
@@ -66,7 +65,7 @@
 
     <!-- CONDITIONAL BLOCKS -->
 
-    <!-- ifCalcParam with elseIf and else -->
+    <!-- ifCalcParam -->
     <xs:complexType name="ifCalcParamType">
         <xs:sequence>
             <!-- then content -->
@@ -97,7 +96,27 @@
     <!-- ifGroovyPredicate -->
     <xs:complexType name="ifGroovyPredicateType">
         <xs:sequence>
+            <!-- then content -->
             <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+
+            <!-- zero or more elseIf blocks -->
+            <xs:element name="elseIf" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                    <xs:attribute name="groovyPredicate" type="xs:string" use="required"/>
+                </xs:complexType>
+            </xs:element>
+
+            <!-- optional else block -->
+            <xs:element name="else" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:group ref="entryGroup" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
         </xs:sequence>
         <xs:attribute name="groovyPredicate" type="xs:string" use="required"/>
     </xs:complexType>
