@@ -4,9 +4,9 @@
 
 <!--    UsiConfiguration-->
     <constantEntry key="Class" value="Configuration"/>
-    <calcParamEntry key="QALibrary" calcParam="Aleph"/>
-    <calcParamEntry key="UseFlatResultHandler" calcParam="true"/>
-    <calcParamEntry key="LegacyQAGridVolBump" calcParam="true"/>
+    <constantEntry key="QALibrary" value="Aleph"/>
+    <constantEntry key="UseFlatResultHandler" value="true"/>
+    <constantEntry key="LegacyQAGridVolBump" value="true"/>
 
 <!--    AlephBottomUpRisk-->
     <calcParamEntry key="CalculateBottomUpRisk" calcParam="ALEPH_BOTTOM_UP_RISK_ENABLED"/>
@@ -42,7 +42,12 @@
 <!--    SingleAPI-->
     <ifCalcParam calcParam="USE_PRODUCT_GENERIC_FPF">
         <mapEntry key="SingleAPIFlags">
-            <groovyEntry key="SingleAPIFlags" value="getSingleAPIFlags"/>
+            <ifGroovyPredicate groovyPredicate="isTimeoutNotNull">
+                <mapEntry key="FPF">
+                    <constantEntry key="Class" value="FPFFlags"/>
+                    <groovyEntry key="Timeout" value="getTimeout"/>
+                </mapEntry>
+            </ifGroovyPredicate>
         </mapEntry>
     </ifCalcParam>
 
@@ -50,7 +55,8 @@
     <calcParamEntry key="ReportingCurrency" calcParam="REPORTING_CURRENCY"/>
 
 <!--    ValuationStatesInformation-->
-    <groovyEntry key="ValuationStateId" value="getValuationStatesInformation"/>
+    <groovyEntry key="ValuationStates" value="getValuationStatesInformation"/>
+    <groovyEntry key="ValuationStateId" value="getValuationStatesId"/>
 
 <!--    RegulatoryModel-->
     <calcParamEntry key="ReturnRegulatoryModelType" calcParam="RETURN_REGULATORY_MODEL"/>
@@ -79,9 +85,9 @@
     <ifGroovyPredicate groovyPredicate="isGPUIndexPresent">
         <constantEntry key="UseGPUAcceleration" value="true"/>
         <groovyEntry key="HostEngineIndex" value="getGPUIndex"/>
-    </ifGroovyPredicate>
-    <ifGroovyPredicate groovyPredicate="isGPUEnabledInstrument">
-        <constantEntry key="UseGPUAcceleration" value="true"/>
+        <elseIf groovyPredicate="isGPUEnabledInstrument">
+            <constantEntry key="UseGPUAcceleration" value="true"/>
+        </elseIf>
     </ifGroovyPredicate>
 
 <!--    FlattenPivotForward-->
@@ -95,8 +101,8 @@
 
 <!--    TODO: Revise - CustomMutatorScript-->
     <ifCalcParam calcParam="WITH_CUSTOM_MUTATOR">
-        <groovyEntry key="Script" value="getScript"/>
-<!--        mutatorDefinitionMap-->
+        <groovyEntry key="Script" value="getMutatorGenericScript"/>
+        <groovyEntry key="ScriptCatalogue" value="getMutatorScriptCatalogue"/>
     </ifCalcParam>
 
 <!--    TODO: Revise - FillFixingsPolicy-->
@@ -111,9 +117,21 @@
 
 <!--    NewCurves-->
     <ifCalcParam calcParam="NEW_CURVES_ENABLED">
-        <groovyEntry key="NewCurvesSettings" value="getNewCurvesSettings"/>
+        <mapEntry key="NewCurvesSettings">
+            <constantEntry key="Class" value="NewCurvesSettings"/>
+            <constantEntry key="UseNewCurves" value="true"/>
+            <calcParamEntry key="UseRfrDiscounting" calcParam="USE_RFR_DISCOUNTING"/>
+            <calcParamEntry key="UseHctFragmentsForIRRisk" calcParam="NEW_CURVES_HCT_FRAGMENTS_IR_RISK" defaultValue="true"/>
+            <calcParamEntry key="UseCrtDiscounting" calcParam="NEW_CURVES_HCT_FRAGMENTS_CRT_DISCOUNTING"/>
+            <calcParamEntry key="PrecalculateCurveSet" calcParam="NEW_CURVES_PRECALCULATE_CURVESET"/>
+            <calcParamEntry key="DisableCurveSetOptimisation" calcParam="DISABLE_CURVE_SET_OPTIMISATION"/>
+        </mapEntry>
         <elseIf calcParam="USE_BOX_MARKET_DATA_FOR_BOX_CURRENCIES">
-            <groovyEntry key="NewCurvesSettings" value="getOldCurvesSettings"/>
+            <mapEntry key="NewCurvesSettings">
+                <constantEntry key="UseNewCurves" value="false"/>
+                <constantEntry key="UseRfrDiscounting" value="false"/>
+                <constantEntry key="UseLegalDiscountingOC" value="true"/>
+            </mapEntry>
         </elseIf>
     </ifCalcParam>
 
