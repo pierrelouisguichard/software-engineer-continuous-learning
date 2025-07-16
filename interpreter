@@ -1,0 +1,70 @@
+import jakarta.xml.bind.*;
+import jakarta.xml.bind.annotation.*;
+
+import javax.xml.XMLConstants;
+import javax.xml.validation.SchemaFactory;
+import java.io.Reader;
+import java.nio.file.*;
+import java.util.*;
+
+public class Interpreter {
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    @XmlRootElement(name = "usiConfiguration")
+    public static class UsiConfiguration {
+        @XmlElement(name = "constantEntry")
+        private List<ConstantEntry> constantEntries = new ArrayList<>();
+
+        @XmlElement(name = "calcParamEntry")
+        private List<CalcParamEntry> calcParamEntries = new ArrayList<>();
+
+        public List<ConstantEntry>  getConstantEntries() { return constantEntries; }
+        public List<CalcParamEntry> getCalcParamEntries() { return calcParamEntries; }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class ConstantEntry {
+        @XmlAttribute(required = true) private String key;
+        @XmlAttribute(required = true) private String value;
+        public String getKey()   { return key; }
+        public String getValue() { return value; }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class CalcParamEntry {
+        @XmlAttribute(required = true) private String key;
+        @XmlAttribute(required = true) private String calcParam;
+        public String getKey()       { return key; }
+        public String getCalcParam() { return calcParam; }
+    }
+
+    public static Map<String, Object> load(Path xml,
+                                           Path xsd,
+                                           Map<String, Object> externalCalcParams) throws Exception {
+        JAXBContext ctx = JAXBContext.newInstance(UsiConfiguration.class);
+        Unmarshaller um = ctx.createUnmarshaller();
+
+        if (xsd != null) {
+            var sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+            um.setSchema(sf.newSchema(xsd.toFile()));
+        }
+
+        try (Reader rdr = Files.newBufferedReader(xml)) {
+            UsiConfiguration cfg = (UsiConfiguration) um.unmarshal(rdr);
+            Map<String, Object> result = new LinkedHashMap<>();
+
+            for (ConstantEntry ce : cfg.getConstantEntries()) {
+                result.put(ce.getKey(), ce.getValue());  // value as String
+            }
+
+            for (CalcParamEntry cpe : cfg.getCalcParamEntries()) {
+                Object val = externalCalcParams.get(cpe.getCalcParam());
+                if (val != null) {
+                    result.put(cpe.getKey(), val);  // value as Object (Boolean, String, etc)
+                }
+            }
+            return result;
+        }
+    }
+
+}
