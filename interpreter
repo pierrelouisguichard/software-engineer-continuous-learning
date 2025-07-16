@@ -1,32 +1,36 @@
 import jakarta.xml.bind.*;
 import jakarta.xml.bind.annotation.*;
-
-import javax.xml.XMLConstants;
-import javax.xml.validation.SchemaFactory;
-import java.io.Reader;
-import java.nio.file.*;
+import java.io.File;
 import java.util.*;
+import groovy.util.GroovyScriptEngine;
+import groovy.lang.GroovyObject;
 
-public class Interpreter {
+@XmlRootElement(name = "usiConfiguration")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class ConfigInterpreter {
 
-    @XmlAccessorType(XmlAccessType.FIELD)
-    @XmlRootElement(name = "usiConfiguration")
-    public static class UsiConfiguration {
-        @XmlElement(name = "constantEntry")
-        private List<ConstantEntry> constantEntries = new ArrayList<>();
+    @XmlElement(name = "constantEntry")
+    private List<ConstantEntry> constantEntries = new ArrayList<>();
 
-        @XmlElement(name = "calcParamEntry")
-        private List<CalcParamEntry> calcParamEntries = new ArrayList<>();
+    @XmlElement(name = "calcParamEntry")
+    private List<CalcParamEntry> calcParamEntries = new ArrayList<>();
 
-        public List<ConstantEntry>  getConstantEntries() { return constantEntries; }
-        public List<CalcParamEntry> getCalcParamEntries() { return calcParamEntries; }
-    }
+    @XmlElement(name = "groovyEntry")
+    private List<GroovyEntry> groovyEntries = new ArrayList<>();
+
+    @XmlElement(name = "mapEntry")
+    private List<MapEntry> mapEntries = new ArrayList<>();
+
+    public List<ConstantEntry> getConstantEntries() { return constantEntries; }
+    public List<CalcParamEntry> getCalcParamEntries() { return calcParamEntries; }
+    public List<GroovyEntry> getGroovyEntries() { return groovyEntries; }
+    public List<MapEntry> getMapEntries() { return mapEntries; }
 
     @XmlAccessorType(XmlAccessType.FIELD)
     public static class ConstantEntry {
         @XmlAttribute(required = true) private String key;
         @XmlAttribute(required = true) private String value;
-        public String getKey()   { return key; }
+        public String getKey() { return key; }
         public String getValue() { return value; }
     }
 
@@ -34,37 +38,92 @@ public class Interpreter {
     public static class CalcParamEntry {
         @XmlAttribute(required = true) private String key;
         @XmlAttribute(required = true) private String calcParam;
-        public String getKey()       { return key; }
+        @XmlAttribute private String defaultValue = "false";
+        public String getKey() { return key; }
         public String getCalcParam() { return calcParam; }
+        public String getDefaultValue() { return defaultValue; }
     }
 
-    public static Map<String, Object> load(Path xml,
-                                           Path xsd,
-                                           Map<String, Object> externalCalcParams) throws Exception {
-        JAXBContext ctx = JAXBContext.newInstance(UsiConfiguration.class);
-        Unmarshaller um = ctx.createUnmarshaller();
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class GroovyEntry {
+        @XmlAttribute(required = true) private String key;
+        @XmlAttribute(required = true) private String value;
+        public String getKey() { return key; }
+        public String getValue() { return value; }
+    }
 
-        if (xsd != null) {
-            var sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-            um.setSchema(sf.newSchema(xsd.toFile()));
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class MapEntry {
+        @XmlAttribute(required = true) private String key;
+
+        @XmlElements({
+                @XmlElement(name = "constantEntry", type = ConstantEntry.class),
+                @XmlElement(name = "calcParamEntry", type = CalcParamEntry.class),
+                @XmlElement(name = "groovyEntry", type = GroovyEntry.class),
+                @XmlElement(name = "mapEntry", type = MapEntry.class)
+        })
+        private List<Object> entries = new ArrayList<>();
+
+        public String getKey() { return key; }
+        public List<Object> getEntries() { return entries; }
+    }
+
+    public static Map<String, Object> load(File xmlFile, Map<String, Object> externalParams, GroovyScriptEngine engine) throws Exception {
+        JAXBContext ctx = JAXBContext.newInstance(ConfigInterpreter.class);
+        Unmarshaller unmarshaller = ctx.createUnmarshaller();
+        ConfigInterpreter cfg = (ConfigInterpreter) unmarshaller.unmarshal(xmlFile);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        Class<?> scriptClass = engine.loadScriptByName("groovyScript.groovy");
+        GroovyObject scriptInstance = (GroovyObject) scriptClass.getDeclaredConstructor().newInstance();
+
+        for (ConstantEntry ce : cfg.getConstantEntries()) {
+            result.put(ce.getKey(), ce.getValue());
         }
 
-        try (Reader rdr = Files.newBufferedReader(xml)) {
-            UsiConfiguration cfg = (UsiConfiguration) um.unmarshal(rdr);
-            Map<String, Object> result = new LinkedHashMap<>();
+        for (CalcParamEntry cpe : cfg.getCalcParamEntries()) {
+            Object val = externalParams.getOrDefault(cpe.getCalcParam(), Boolean.parseBoolean(cpe.getDefaultValue()));
+            result.put(cpe.getKey(), val);
+        }
 
-            for (ConstantEntry ce : cfg.getConstantEntries()) {
-                result.put(ce.getKey(), ce.getValue());  // value as String
-            }
+        for (GroovyEntry ge : cfg.getGroovyEntries()) {
+            Object val = scriptInstance.invokeMethod(ge.getValue(), null);
+            result.put(ge.getKey(), val);
+        }
 
-            for (CalcParamEntry cpe : cfg.getCalcParamEntries()) {
-                Object val = externalCalcParams.get(cpe.getCalcParam());
-                if (val != null) {
-                    result.put(cpe.getKey(), val);  // value as Object (Boolean, String, etc)
+        for (MapEntry me : cfg.getMapEntries()) {
+            Map<String, Object> nested = new LinkedHashMap<>();
+            for (Object entry : me.getEntries()) {
+                if (entry instanceof ConstantEntry ce) {
+                    nested.put(ce.getKey(), ce.getValue());
+                } else if (entry instanceof CalcParamEntry cpe) {
+                    Object val = externalParams.getOrDefault(cpe.getCalcParam(), Boolean.parseBoolean(cpe.getDefaultValue()));
+                    nested.put(cpe.getKey(), val);
+                } else if (entry instanceof GroovyEntry ge) {
+                    Object val = scriptInstance.invokeMethod(ge.getValue(), null);
+                    nested.put(ge.getKey(), val);
+                } else if (entry instanceof MapEntry inner) {
+                    // Optional: handle nested mapEntry
                 }
             }
-            return result;
+            result.put(me.getKey(), nested);
         }
+
+        return result;
     }
 
+    public static void main(String[] args) throws Exception {
+        Map<String, Object> externalParams = new HashMap<>();
+        externalParams.put("ALEPH_BOTTOM_UP_RISK_ENABLED", true);
+        externalParams.put("LIBOR_TRANSITION_ENABLE_IN_CONFIGURATION", false);
+
+        GroovyScriptEngine engine = new GroovyScriptEngine(new String[]{"./scripts"});
+        Map<String, Object> result = load(new File("config.xml"), externalParams, engine);
+
+        System.out.println("Configuration:");
+        for (Map.Entry<String, Object> entry : result.entrySet()) {
+            System.out.println(entry.getKey() + " = " + entry.getValue());
+        }
+    }
 }
