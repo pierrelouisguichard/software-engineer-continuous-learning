@@ -1,0 +1,179 @@
+import javax.xml.bind.*;
+import javax.xml.bind.annotation.*;
+import java.io.File;
+import java.util.*;
+
+@XmlRootElement(name = "usiConfiguration")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class ConfigInterpreter {
+
+    @XmlElement(name = "constantEntry")
+    private List<ConstantEntry> constantEntries = new ArrayList<>();
+
+    @XmlElement(name = "calcParamEntry")
+    private List<CalcParamEntry> calcParamEntries = new ArrayList<>();
+
+    @XmlElement(name = "ifCalcParam")
+    private List<IfCalcParam> ifCalcParams = new ArrayList<>();
+
+    public List<ConstantEntry> getConstantEntries() { return constantEntries; }
+    public List<CalcParamEntry> getCalcParamEntries() { return calcParamEntries; }
+    public List<IfCalcParam> getIfCalcParams() { return ifCalcParams; }
+
+    public static Map<String, Object> load(String xmlFilePath, Map<String, Object> externalParams) throws Exception {
+        JAXBContext context = JAXBContext.newInstance(ConfigInterpreter.class);
+        Unmarshaller unmarshaller = context.createUnmarshaller();
+        ConfigInterpreter cfg = (ConfigInterpreter) unmarshaller.unmarshal(new File(xmlFilePath));
+
+        Map<String, Object> result = new HashMap<>();
+
+        // Handle constant and calcParam entries
+        for (ConstantEntry ce : cfg.getConstantEntries()) {
+            result.put(ce.getKey(), ce.getValue());
+        }
+
+        for (CalcParamEntry cpe : cfg.getCalcParamEntries()) {
+            Object val = externalParams.getOrDefault(cpe.getCalcParam(), parseDefault(cpe.getDefaultValue()));
+            result.put(cpe.getKey(), val);
+        }
+
+        for (IfCalcParam ifBlock : cfg.getIfCalcParams()) {
+            processIfCalcParam(ifBlock, externalParams, result);
+        }
+
+        return result;
+    }
+
+    private static Object parseDefault(String def) {
+        if (def == null) return null;
+        if ("true".equalsIgnoreCase(def)) return true;
+        if ("false".equalsIgnoreCase(def)) return false;
+        return def;
+    }
+
+    private static void processIfCalcParam(IfCalcParam ifBlock, Map<String, Object> externalParams, Map<String, Object> result) {
+        Object val = externalParams.get(ifBlock.getCalcParam());
+        boolean matched = Boolean.TRUE.equals(val);
+
+        if (matched) {
+            processConditionalBlock(ifBlock.getThenBlock(), externalParams, result);
+        } else {
+            boolean elseIfMatched = false;
+            for (ElseIfBlock elseIf : ifBlock.getElseIfBlocks()) {
+                Object elseIfVal = externalParams.get(elseIf.getCalcParam());
+                if (Boolean.TRUE.equals(elseIfVal)) {
+                    processConditionalBlock(elseIf, externalParams, result);
+                    elseIfMatched = true;
+                    break;
+                }
+            }
+            if (!elseIfMatched) {
+                processConditionalBlock(ifBlock.getElseBlock(), externalParams, result);
+            }
+        }
+    }
+
+    private static void processConditionalBlock(ConditionalBlock block, Map<String, Object> externalParams, Map<String, Object> result) {
+        if (block == null) return;
+
+        for (ConstantEntry ce : block.getConstantEntries()) {
+            result.put(ce.getKey(), ce.getValue());
+        }
+
+        for (CalcParamEntry cpe : block.getCalcParamEntries()) {
+            Object val = externalParams.getOrDefault(cpe.getCalcParam(), parseDefault(cpe.getDefaultValue()));
+            result.put(cpe.getKey(), val);
+        }
+
+        for (IfCalcParam nested : block.getIfCalcParams()) {
+            processIfCalcParam(nested, externalParams, result);
+        }
+    }
+
+    // === Nested classes ===
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class ConstantEntry {
+        @XmlAttribute(required = true)
+        private String key;
+
+        @XmlAttribute(required = true)
+        private String value;
+
+        public String getKey() { return key; }
+        public String getValue() { return value; }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class CalcParamEntry {
+        @XmlAttribute(required = true)
+        private String key;
+
+        @XmlAttribute(required = true)
+        private String calcParam;
+
+        @XmlAttribute
+        private String defaultValue;
+
+        public String getKey() { return key; }
+        public String getCalcParam() { return calcParam; }
+        public String getDefaultValue() { return defaultValue; }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class IfCalcParam {
+        @XmlAttribute(required = true)
+        private String calcParam;
+
+        @XmlElement(name = "then")
+        private ConditionalBlock thenBlock;
+
+        @XmlElement(name = "elseIf")
+        private List<ElseIfBlock> elseIfBlocks = new ArrayList<>();
+
+        @XmlElement(name = "else")
+        private ConditionalBlock elseBlock;
+
+        public String getCalcParam() { return calcParam; }
+        public ConditionalBlock getThenBlock() { return thenBlock; }
+        public List<ElseIfBlock> getElseIfBlocks() { return elseIfBlocks; }
+        public ConditionalBlock getElseBlock() { return elseBlock; }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class ConditionalBlock {
+        @XmlElement(name = "constantEntry")
+        private List<ConstantEntry> constantEntries = new ArrayList<>();
+
+        @XmlElement(name = "calcParamEntry")
+        private List<CalcParamEntry> calcParamEntries = new ArrayList<>();
+
+        @XmlElement(name = "ifCalcParam")
+        private List<IfCalcParam> ifCalcParams = new ArrayList<>();
+
+        public List<ConstantEntry> getConstantEntries() { return constantEntries; }
+        public List<CalcParamEntry> getCalcParamEntries() { return calcParamEntries; }
+        public List<IfCalcParam> getIfCalcParams() { return ifCalcParams; }
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class ElseIfBlock extends ConditionalBlock {
+        @XmlAttribute(required = true)
+        private String calcParam;
+
+        public String getCalcParam() { return calcParam; }
+    }
+
+    // === Main method for testing ===
+
+    public static void main(String[] args) throws Exception {
+        Map<String, Object> external = new HashMap<>();
+        external.put("NEW_CURVES_ENABLED", false);
+        external.put("LIBOR_TRANSITION_ENABLE_IN_CONFIGURATION", true);
+        external.put("ENABLE_FEATURES", true);
+        external.put("EXPERIMENTAL_MODE", false);
+
+        Map<String, Object> config = ConfigInterpreter.load("config.xml", external);
+        config.forEach((k, v) -> System.out.println(k + " = " + v));
+    }
+}
