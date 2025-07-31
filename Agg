@@ -1,0 +1,56 @@
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.node.*;
+
+import java.io.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Iterator;
+import java.util.Map;
+
+public class ExcelDateConverter {
+
+    public static void main(String[] args) throws IOException {
+        // Load JSON file
+        File inputFile = new File("input.json");
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(inputFile);
+
+        // Process JSON recursively
+        JsonNode updated = convertExcelDates(root);
+
+        // Save updated JSON
+        File outputFile = new File("output.json");
+        mapper.writerWithDefaultPrettyPrinter().writeValue(outputFile, updated);
+        System.out.println("Converted dates and saved to output.json");
+    }
+
+    private static JsonNode convertExcelDates(JsonNode node) {
+        if (node.isObject()) {
+            ObjectNode objectNode = (ObjectNode) node;
+            Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                JsonNode updatedValue = convertExcelDates(entry.getValue());
+                objectNode.set(entry.getKey(), updatedValue);
+            }
+            return objectNode;
+        } else if (node.isArray()) {
+            ArrayNode arrayNode = (ArrayNode) node;
+            for (int i = 0; i < arrayNode.size(); i++) {
+                arrayNode.set(i, convertExcelDates(arrayNode.get(i)));
+            }
+            return arrayNode;
+        } else if (node.isTextual()) {
+            String value = node.asText();
+            if (value.matches("\\.date\\.\\d+")) {
+                int serial = Integer.parseInt(value.replace(".date.", ""));
+                LocalDate baseDate = LocalDate.of(1899, 12, 30); // Excel's base date
+                LocalDate realDate = baseDate.plusDays(serial);
+                return new TextNode(realDate.format(DateTimeFormatter.ISO_DATE)); // yyyy-MM-dd
+            }
+            return node;
+        } else {
+            return node;
+        }
+    }
+}
