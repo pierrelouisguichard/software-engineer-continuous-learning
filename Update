@@ -1,0 +1,62 @@
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.node.*;
+
+import java.io.*;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Iterator;
+import java.util.Map;
+
+public class ExcelDateTimeConverter {
+
+    public static void main(String[] args) throws IOException {
+        File inputFile = new File("input.json");
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(inputFile);
+
+        JsonNode updated = convertExcelDates(root);
+
+        File outputFile = new File("output.json");
+        mapper.writerWithDefaultPrettyPrinter().writeValue(outputFile, updated);
+        System.out.println("Converted Excel dates and saved to output.json");
+    }
+
+    private static JsonNode convertExcelDates(JsonNode node) {
+        if (node.isObject()) {
+            ObjectNode obj = (ObjectNode) node;
+            Iterator<Map.Entry<String, JsonNode>> fields = obj.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                obj.set(entry.getKey(), convertExcelDates(entry.getValue()));
+            }
+            return obj;
+        } else if (node.isArray()) {
+            ArrayNode arr = (ArrayNode) node;
+            for (int i = 0; i < arr.size(); i++) {
+                arr.set(i, convertExcelDates(arr.get(i)));
+            }
+            return arr;
+        } else if (node.isTextual()) {
+            String value = node.asText();
+            if (value.matches("\\.date\\.\\d+(\\.\\d+)?")) {
+                double excelValue = Double.parseDouble(value.replace(".date.", ""));
+                return new TextNode(excelToDateTimeString(excelValue));
+            }
+            return node;
+        } else {
+            return node;
+        }
+    }
+
+    private static String excelToDateTimeString(double serial) {
+        // Excel's base: 1899-12-30
+        int wholeDays = (int) serial;
+        double fraction = serial - wholeDays;
+
+        LocalDateTime base = LocalDateTime.of(1899, 12, 30, 0, 0);
+        LocalDateTime result = base.plusDays(wholeDays).plusSeconds((long)(fraction * 86400));
+
+        return result.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+}
